@@ -1,0 +1,44 @@
+server:
+  port: 8080
+  host: "0.0.0.0"
+  read_timeout: 30s
+  write_timeout: 30s
+
+database:
+  host: "localhost"
+  port: 5432
+  user: "postgres"
+  password: "password"
+  dbname: "ai_vtuber"
+  sslmode: "disable"
+
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  secret: "your-secret-key"
+  expiration: 24h
+
+logging:
+  level: "info"
+  format: "json"
+
+llm:
+  openai:
+    api_key: ""
+    base_url: "https://api.openai.com/v1"
+    model: "gpt-3.5-turbo"
+
+tts:
+  azure:
+    api_key: ""
+    region: ""
+    voice: "zh-CN-XiaoxiaoNeural"
+
+asr:
+  whisper:
+    api_key: ""
+    model: "whisper-1"
