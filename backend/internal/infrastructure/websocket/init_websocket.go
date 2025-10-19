@@ -1,0 +1,4 @@
+package websocket
+
+func StartWebSocketServer() {
+}

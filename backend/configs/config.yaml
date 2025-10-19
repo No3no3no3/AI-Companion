@@ -9,7 +9,7 @@ database:
   port: 5432
   user: "postgres"
   password: "password"
-  dbname: "ai_vtuber"
+  dbname: "ai_companion"
   sslmode: "disable"
 
 redis:
@@ -17,28 +17,7 @@ redis:
   port: 6379
   password: ""
   db: 0
-
-jwt:
-  secret: "your-secret-key"
-  expiration: 24h
-
-logging:
-  level: "info"
-  format: "json"
-
 llm:
-  openai:
-    api_key: ""
-    base_url: "https://api.openai.com/v1"
-    model: "gpt-3.5-turbo"
-
-tts:
-  azure:
-    api_key: ""
-    region: ""
-    voice: "zh-CN-XiaoxiaoNeural"
-
-asr:
-  whisper:
-    api_key: ""
-    model: "whisper-1"
+  provider: "ollama_llm"  #llm 提供商
+  model: "qwen2.5:latest" #llm 模型
+  baseUrl: "http://custom-server:11434" #llm提供商提供的baseUrl
