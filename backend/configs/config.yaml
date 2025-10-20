@@ -21,3 +21,7 @@ llm:
   provider: "ollama_llm"  #llm 提供商
   model: "qwen2.5:latest" #llm 模型
   baseUrl: "http://custom-server:11434" #llm提供商提供的baseUrl
+
+app:
+  webSocketPort: 8081
+  rpcPort: 8082

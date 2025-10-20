@@ -26,11 +26,18 @@ type Client struct {
 	HeartbeatTime uint64          // 用户上次心跳时间
 	LoginTime     uint64          // 登录时间 登录以后才有
 	Device        string
-	Action        string
+	//Action        string
 }
 
-// NewClient 初始化 每次请求都将更新心跳时间
-func NewClient(addr string, socket *websocket.Conn, firstTime uint64, deviceHeader string, action string) (client *Client) {
+/*
+NewClient 初始化 每次请求都将更新心跳时间
+参数 ：
+ddr 地址
+socketConn：websocket连接
+firstTime 第一次连接时间
+userID 用户id
+*/
+func NewClient(addr string, socket *websocket.Conn, firstTime uint64, userID string) (client *Client) {
 
 	//topicStruct := models2.DeviceParseWebsocket(context.TODO(), deviceHeader)
 
@@ -41,33 +48,32 @@ func NewClient(addr string, socket *websocket.Conn, firstTime uint64, deviceHead
 		Send:          make(chan []byte, 100),
 		FirstTime:     firstTime,
 		HeartbeatTime: firstTime,
-		Device:        deviceHeader,
-		Action:        action,
+		Device:        userID,
 	}
 	return
 }
 
 // 读取客户端数据
-func (c *Client) read(ctx context.Context) {
+func (c *Client) read(ctx context.Context) ([]byte, error) {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Info(ctx, "read client message stop", string(debug.Stack()), r)
+			logger.Info("read client message stop", string(debug.Stack()), r)
 		}
 	}()
 	defer func() {
-		logger.Info(ctx, "read client message closed", map[string]string{"RemoteAddr": c.Addr})
+		logger.Info("read client message closed", map[string]string{"RemoteAddr": c.Addr})
 		close(c.Send)
 	}()
 	for {
 		_, message, err := c.Socket.ReadMessage()
 
 		if err != nil {
-			logger.Info(ctx, "read client message error", fmt.Sprintf(`{"client":%s, "error": %s}`, c.Addr, err))
-			return
+			logger.Info("read client message error", fmt.Sprintf(`{"client":%s, "error": %s}`, c.Addr, err))
+			return nil, err
 		}
 		c.Heartbeat(uint64(time.Now().Unix()))
 		// 处理程序
-		ProcessData(c, message)
+		return message, nil
 	}
 }
 

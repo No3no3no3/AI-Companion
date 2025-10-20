@@ -84,7 +84,7 @@ func GetString(configPath string) string {
 	configValue := viper.GetString(configPath)
 	if configValue == "" {
 		if !viper.IsSet(configPath) {
-			logger.Error(context.Background(), "config not found", configPath)
+			logger.Error(context.Background(), "config not found ", configPath)
 		}
 	}
 	return configValue

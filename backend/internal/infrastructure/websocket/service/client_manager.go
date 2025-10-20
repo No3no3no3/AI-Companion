@@ -62,12 +62,11 @@ func (manager *ClientManager) GetClientsLen() (clientsLen int) {
 	return
 }
 
-// EventRegister 用户关闭连接事件
+// EventUnRegister 用户关闭连接事件
 func (manager *ClientManager) EventUnRegister(client *Client) {
 	//	client2.DeleteDeviceOnline(context.TODO(), client.UserID)
 	logger.Info(context.Background(), "EventUnRegister", map[string]string{"UserId": client.UserID, "Addr": client.Addr})
 	delete(RegisterDeviceMap, client.UserID)
-
 }
 
 // EventRegister 用户建立连接事件

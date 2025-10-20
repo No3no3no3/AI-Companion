@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"runtime/debug"
 	"sync"
-	"time"
 
 	"github.com/ai-companion/backend/internal/pkg/logger"
-	"github.com/google/uuid"
 )
 
 // DisposeFunc 处理函数
@@ -39,17 +37,17 @@ func Register(key string, value DisposeFunc) {
 // 返回值:
 //
 //	ctx context.Context: 包含请求数据的上下文，用于在不同层级的处理中传递请求相关信息。
-func InitWSCtx(ctx context.Context, client *Client) context.Context {
-	// 创建全局请求数据对象，填充请求ID、客户端IP、请求动作和时间戳。
-	data := map[string]string{
-		"RequestID":   uuid.NewString(),
-		"ClientIP":    client.Socket.RemoteAddr().String(),
-		"Url":         client.Device,
-		"RequestTime": time.Now().String(),
-	}
-	// 使用RequestDataKey将全局请求数据对象放入上下文中。
-	return context.WithValue(ctx, "requestData", data)
-}
+//func InitWSCtx(ctx context.Context, client *Client) context.Context {
+//	// 创建全局请求数据对象，填充请求ID、客户端IP、请求动作和时间戳。
+//	data := map[string]string{
+//		"RequestID":   uuid.NewString(),
+//		"ClientIP":    client.Socket.RemoteAddr().String(),
+//		"Url":         client.Device,
+//		"RequestTime": time.Now().String(),
+//	}
+//	// 使用RequestDataKey将全局请求数据对象放入上下文中。
+//	return context.WithValue(ctx, "requestData", data)
+//}
 
 func getHandlers(key string) (value DisposeFunc, ok bool) {
 	handlersRWMutex.RLock()
@@ -63,7 +61,7 @@ func ProcessData(client *Client, message []byte) {
 
 	ctx := context.Background()
 
-	ctx = InitWSCtx(ctx, client)
+	//ctx = InitWSCtx(ctx, client)
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -75,10 +73,10 @@ func ProcessData(client *Client, message []byte) {
 	//logger.Info(ctx, "Process client data params", message)
 
 	// 采用 map 注册的方式
-	if value, ok := getHandlers(client.Action); ok {
+	if value, ok := getHandlers(""); ok {
 		value(client, ctx, message)
 	} else {
-		logger.Error(ctx, "getHandlers error router not exist", client.Action)
+		logger.Error(ctx, "getHandlers error router not exist", "")
 	}
 	return
 }
