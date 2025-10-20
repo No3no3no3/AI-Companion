@@ -237,7 +237,7 @@ func RateLimitMiddleware() gin.HandlerFunc {
 
 <script setup lang="ts">
 import { ref, onMounted, nextTick, computed } from 'vue'
-import { useChatStore } from '@/stores/chat'
+import { useChatStore } from '@/stores/chat_domain'
 import { useUserStore } from '@/stores/user'
 import { WebSocketService } from '@/services/websocket'
 import { AudioProcessor } from '@/utils/audio'
@@ -381,13 +381,13 @@ onMounted(() => {
 
 #### 3.2 Pinia Store 设计规范
 ```typescript
-// stores/chat.ts
+// stores/chat_domain.ts
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { chatService } from '@/services/chat'
+import { chatService } from '@/services/chat_domain'
 import type { Chat, Message, ChatState } from '@/types'
 
-export const useChatStore = defineStore('chat', () => {
+export const useChatStore = defineStore('chat_domain', () => {
   // State
   const chats = ref<Chat[]>([])
   const currentChatId = ref<string | null>(null)
@@ -421,7 +421,7 @@ export const useChatStore = defineStore('chat', () => {
 
   const sendMessage = async (messageData: Partial<Message>) => {
     if (!currentChatId.value) {
-      throw new Error('No active chat')
+      throw new Error('No active chat_domain')
     }
 
     // 乐观更新
@@ -488,7 +488,7 @@ export const useChatStore = defineStore('chat', () => {
       setCurrentChat(response.data.id)
       return response.data
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to create chat'
+      error.value = err instanceof Error ? err.message : 'Failed to create chat_domain'
       throw err
     }
   }
@@ -615,7 +615,7 @@ class ApiService {
 
 export const apiService = new ApiService()
 
-// services/chat.ts
+// services/chat_domain.ts
 import { apiService } from './api'
 import type { Chat, Message, SendMessageRequest } from '@/types'
 
@@ -655,7 +655,7 @@ export const chatService = {
 #### 3.4 WebSocket 服务规范
 ```typescript
 // services/websocket.ts
-import { useChatStore } from '@/stores/chat'
+import { useChatStore } from '@/stores/chat_domain'
 import { useUserStore } from '@/stores/user'
 
 export interface WebSocketMessage {

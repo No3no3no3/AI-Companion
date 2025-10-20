@@ -3,6 +3,7 @@ package llm
 import (
 	"context"
 
+	"github.com/ai-companion/backend/internal/pkg/config"
 	"github.com/ai-companion/backend/internal/pkg/logger"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
@@ -14,13 +15,18 @@ type OpenAILLM struct {
 
 var openAILLM *OpenAILLM
 
-func NewOpenAILLM(cfg map[string]string) *OpenAILLM {
+func NewOpenAILLM(cfg *config.LLMConfig) *OpenAILLM {
+	opts := []openai.Option{
+		openai.WithToken(cfg.Token),
+		openai.WithModel(cfg.Model),
+	}
+	if cfg.BaseUrl != "" {
+		opts = append(opts, openai.WithBaseURL(cfg.BaseUrl))
+	}
 	llm, err := openai.New(
-		openai.WithToken(cfg["api-key"]),   // api-key
-		openai.WithModel(cfg["model"]),     // Specify model
-		openai.WithBaseURL(cfg["baseUrl"]), // Custom endpoint
-		//openai.WithOrganization("org-id"), // Organization ID
-		//openai.WithAPIVersion("2023-12-01") ,// API version)
+		opts...,
+	//openai.WithOrganization("org-id"), // Organization ID
+	//openai.WithAPIVersion("2023-12-01") ,// API version)
 	)
 	if err != nil {
 		logger.Errorf("connection openAI error : %s", err.Error())
@@ -32,7 +38,6 @@ func NewOpenAILLM(cfg map[string]string) *OpenAILLM {
 func (o *OpenAILLM) GenerateChat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 	res, err := llms.GenerateFromSinglePrompt(ctx, o.llm, req.Message)
 	if err != nil {
-		logger.Errorf("generate chat error : %s", err.Error())
 		return nil, err
 	}
 	return &ChatResponse{Object: res}, nil

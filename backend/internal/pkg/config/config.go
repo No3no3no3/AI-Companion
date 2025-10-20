@@ -42,6 +42,7 @@ type LLMConfig struct {
 	Provider string `mapstructure:"provider"`
 	Model    string `mapstructure:"model"`
 	BaseUrl  string `mapstructure:"baseUrl"`
+	Token    string `mapstructure:"token"`
 }
 
 func Load() *Config {

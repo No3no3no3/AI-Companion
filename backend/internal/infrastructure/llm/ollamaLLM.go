@@ -3,6 +3,7 @@ package llm
 import (
 	"context"
 
+	"github.com/ai-companion/backend/internal/pkg/config"
 	"github.com/ai-companion/backend/internal/pkg/logger"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/ollama"
@@ -12,9 +13,9 @@ type OllamaLLM struct {
 	llm *ollama.LLM
 }
 
-func NewOllamaLLM(cfg map[string]string) *OllamaLLM {
+func NewOllamaLLM(cfg *config.LLMConfig) *OllamaLLM {
 	llm, err := ollama.New(
-		ollama.WithModel(cfg["model"]),
+		ollama.WithModel(cfg.Model),
 	)
 	if err != nil {
 		logger.Errorf("new ollama llm error:%s", err.Error())
@@ -28,7 +29,7 @@ func NewOllamaLLM(cfg map[string]string) *OllamaLLM {
 func (o *OllamaLLM) GenerateChat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 	res, err := llms.GenerateFromSinglePrompt(ctx, o.llm, req.Message)
 	if err != nil {
-		logger.Errorf("generate chat error : %s", err.Error())
+		logger.Errorf("generate chat_domain error : %s", err.Error())
 		return nil, err
 	}
 	return &ChatResponse{Object: res}, nil
