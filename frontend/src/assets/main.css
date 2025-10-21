@@ -1,0 +1,55 @@
+/*
+  main.css - 全局样式文件
+
+  注意：这个文件主要保留一些基础的全局样式设置。
+  聊天界面的具体样式已经在ChatInterface.vue组件中定义。
+
+  后端开发者注意事项：
+  - 这里移除了Vue默认的样式，因为我们的聊天界面有自己的样式系统
+  - 保留了base.css的导入，它包含一些有用的CSS重置
+*/
+
+@import './base.css';
+
+/* 基础的链接样式，保留以备需要 */
+a {
+  text-decoration: none;
+  color: #667eea;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: #764ba2;
+}
+
+/* 滚动条样式，让整个应用的滚动条更美观 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(103, 126, 234, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(103, 126, 234, 0.7);
+}
+
+/* 焦点样式，提升可访问性 */
+*:focus {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}
+
+/* 选择文本的样式 */
+::selection {
+  background: rgba(103, 126, 234, 0.2);
+  color: #333;
+}
