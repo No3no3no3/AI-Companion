@@ -7,6 +7,11 @@ type Response struct {
 	Data interface{} `json:"data,omitempty"`
 }
 
+type SSEResponse struct {
+	EventType string      `json:"eventType"`
+	Data      interface{} `json:"data"`
+}
+
 // PageResponse 分页响应结构
 type PageResponse struct {
 	Code    int         `json:"code"`

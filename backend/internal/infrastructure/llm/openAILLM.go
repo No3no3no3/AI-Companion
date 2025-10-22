@@ -2,6 +2,7 @@ package llm
 
 import (
 	"context"
+	"time"
 
 	"github.com/ai-companion/backend/internal/pkg/config"
 	"github.com/ai-companion/backend/internal/pkg/logger"
@@ -51,35 +52,38 @@ func (o *OpenAILLM) GenerateStream(ctx context.Context, req *ChatRequest) (<-cha
 	go func() {
 		defer close(resChan) // 确保 channel 在结束时关闭
 
+		streamCtx, streamCancel := context.WithTimeout(ctx, 30*time.Second)
+		defer streamCancel()
+
 		_, err := o.llm.GenerateContent(
-			ctx,
+			streamCtx,
 			[]llms.MessageContent{
 				llms.TextParts(llms.ChatMessageTypeSystem, "你是一个非常有用的助理"),
-				llms.TextParts(llms.ChatMessageTypeHuman, req.Message), // 使用请求中的消息
+				llms.TextParts(llms.ChatMessageTypeHuman, req.Message),
 			},
-			// 开启流式输出
-			llms.WithStreamingFunc(func(_ context.Context, chunk []byte) error {
-				select {
-				case resChan <- &StreamChunk{
-					Object: string(chunk),
-				}:
-				case <-ctx.Done():
-					// 如果上下文被取消，停止发送
-					return ctx.Err()
+			// 尝试启用流式输出
+			llms.WithStreamingFunc(func(streamCtx context.Context, chunk []byte) error {
+				chunkStr := string(chunk)
+				if chunkStr != "" {
+					select {
+					case resChan <- &StreamChunk{
+						Message: chunkStr,
+					}:
+					case <-streamCtx.Done():
+						return streamCtx.Err()
+					}
 				}
 				return nil
 			}),
 		)
-
 		if err != nil {
-			// 发送错误信息到 channel
+			// 错误处理
 			select {
 			case resChan <- &StreamChunk{
 				Error: err,
 				Done:  true,
 			}:
-			case <-ctx.Done():
-				// 上下文已取消，不发送错误
+				logger.Error("Failed to create stream: " + err.Error())
 			}
 		}
 	}()

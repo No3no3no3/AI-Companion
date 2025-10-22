@@ -86,13 +86,15 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted } from 'vue'
 
 // 响应式数据声明
 const messages = ref([]) // 存储所有聊天消息
 const inputMessage = ref('') // 当前输入框的内容
 const isLoading = ref(false) // 加载状态，用于显示发送中状态
 const messagesListRef = ref(null) // 消息列表的DOM引用，用于自动滚动到底部
+const eventSource = ref(null) // SSE连接引用
+const isSSEConnected = ref(false) // SSE连接状态
 
 // 初始化一些示例消息，方便后端开发者理解数据结构
 onMounted(() => {
@@ -107,9 +109,90 @@ onMounted(() => {
 })
 
 /**
- * 发送消息的方法
- * 后端开发者需要在这里调用API接口发送消息到后端服务
- * 当前是模拟实现，实际使用时需要替换为真实的API调用
+ * 处理SSE流式消息数据
+ * @param {Object} data - 接收到的SSE数据
+ * @param {Object} context - 消息上下文，包含aiMessage和messageId
+ */
+const handleStreamMessage = (data, context) => {
+  console.log('SSE Message received:', data)
+
+  const { aiMessage, messageId } = context
+
+  // 处理错误消息
+  if (data.error) {
+    const errorMessage = {
+      id: `${messageId}-error`,
+      content: `错误: ${data.error}`,
+      type: 'ai',
+      timestamp: new Date()
+    }
+    messages.value.push(errorMessage)
+    scrollToBottom()
+    return { hasError: true }
+  }
+
+  // 处理正常的回复消息
+  if (data.reply !== undefined) {
+    if (!aiMessage.value) {
+      // 第一次收到消息数据，创建AI消息
+      aiMessage.value = {
+        id: data.message_id || messageId,
+        content: data.reply,
+        type: 'ai',
+        timestamp: new Date()
+      }
+      messages.value.push(aiMessage.value)
+    } else {
+      // 更新现有消息内容（追加模式）
+      aiMessage.value.content = aiMessage.value.content +  data.reply
+    }
+    scrollToBottom()
+    return { hasMessage: true }
+  }
+
+  return { hasMessage: false }
+}
+
+/**
+ * 处理SSE流式错误
+ * @param {Error} error - 错误对象
+ * @param {string} messageId - 消息ID
+ */
+const handleStreamError = (error, messageId) => {
+  console.error('SSE Stream error:', error)
+  const errorMessage = {
+    id: `${messageId}-stream-error`,
+    content: '抱歉，连接中断，请稍后重试。',
+    type: 'ai',
+    timestamp: new Date()
+  }
+  messages.value.push(errorMessage)
+  scrollToBottom()
+}
+
+/**
+ * 处理SSE流完成事件
+ * @param {Object} aiMessage - AI消息引用
+ * @param {string} messageId - 消息ID
+ */
+const handleStreamComplete = (aiMessage, messageId) => {
+  console.log('SSE Stream completed')
+  if (!aiMessage.value) {
+    // 如果没有收到任何消息，添加一个提示
+    const noResponseMessage = {
+      id: `${messageId}-no-response`,
+      content: '抱歉，没有收到回复，请稍后重试。',
+      type: 'ai',
+      timestamp: new Date()
+    }
+    messages.value.push(noResponseMessage)
+    scrollToBottom()
+  }
+}
+
+/**
+ * 发送消息的方法（支持SSE流式响应）
+ * 可以选择使用普通API或SSE流式API
  */
 const sendMessage = async () => {
   // 检查输入是否为空或正在加载
@@ -134,43 +217,31 @@ const sendMessage = async () => {
   // 滚动到底部显示新消息
   await scrollToBottom()
 
+  // 创建AI消息的占位符，用于流式更新
+  const aiMessage = ref(null)
+  const messageId = `ai-${Date.now()}`
+
   try {
-    // 调用真实的后端API
-    const apiResponse = await callChatAPI(messageContent)
-    console.log("apiResponse : ",apiResponse)
-    // 检查API响应是否成功
-    if (apiResponse.code === 0) {
-      // 创建AI回复消息
-      const reply = apiResponse.data
-      const aiMessage = {
-        id: reply.messageId,
-        content: reply.reply,
-        type: 'ai',
-        timestamp: new Date()
-      }
-
-      // 添加AI回复到消息列表
-      messages.value.push(aiMessage)
-
-      // 再次滚动到底部
-      await scrollToBottom()
-    } else {
-      // 处理API返回的错误
-      throw new Error(apiResponse.error || 'Unknown error occurred')
-    }
+    // 使用SSE流式API
+    await callChatStreamAPI(
+      messageContent,
+      // onMessage - 处理流式数据
+      (data) => handleStreamMessage(data, { aiMessage, messageId }),
+      // onError - 处理错误
+      (error) => handleStreamError(error, messageId),
+      // onComplete - 流结束处理
+      () => handleStreamComplete(aiMessage, messageId)
+    )
 
   } catch (error) {
     console.error('发送消息失败:', error)
-
     // 创建错误消息显示给用户
     const errorMessage = {
-      id: (Date.now() + 1).toString(),
-      content: '抱歉，消息发送失败，请稍后重试。错误信息：' + (error.message || '未知错误'),
-      type: 'ai',
-      timestamp: new Date()
-    }
-
-    // 添加错误消息到消息列表
+        id: `${messageId}-error`,
+        content: '抱歉，消息发送失败，请稍后重试。错误信息：' + (error || '未知错误'),
+        type: 'ai',
+        timestamp: new Date()
+      }
     messages.value.push(errorMessage)
     await scrollToBottom()
   } finally {
@@ -226,7 +297,7 @@ const formatTime = (timestamp) => {
 }
 
 /**
- * 调用后端API发送消息
+ * 调用后端API发送消息（非流式）
  * 发送请求到 http://127.0.0.1:8080/api/chat
  */
 const callChatAPI = async (message) => {
@@ -253,6 +324,129 @@ const callChatAPI = async (message) => {
     throw error
   }
 }
+
+/**
+ * 关闭SSE连接
+ */
+const closeSSEConnection = () => {
+  if (eventSource.value) {
+    console.log('Closing SSE connection')
+    eventSource.value.close()
+    eventSource.value = null
+    isSSEConnected.value = false
+  }
+}
+
+/**
+ * 调用后端SSE API发送消息（使用真正的EventSource）
+ * 建立SSE连接到 http://127.0.0.1:8080/api/chatStream
+ */
+const callChatStreamAPI = async (message, onMessage, onError, onComplete) => {
+  return new Promise((resolve, reject) => {
+    try {
+      // 关闭之前的连接
+      closeSSEConnection()
+
+      // 构建SSE URL，将消息作为查询参数传递
+      const params = new URLSearchParams({
+        message: message,
+        userId: 'user_001'
+      })
+      const sseUrl = `http://127.0.0.1:8080/api/chatStream?${params.toString()}`
+
+      console.log('Establishing SSE connection to:', sseUrl)
+
+      // 创建EventSource连接
+      eventSource.value = new EventSource(sseUrl)
+      isSSEConnected.value = true
+
+      // 监听消息事件
+      eventSource.value.onmessage = (event) => {
+        console.log("no process sse event", event)
+      }
+
+      // 监听特定事件类型
+      eventSource.value.addEventListener('star', (event) => {
+            console.log('SSE star ')
+      })
+
+      eventSource.value.addEventListener('message', (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          console.log('SSE Message received:', data)
+          onMessage(data)
+        } catch (parseError) {
+          console.error('Failed to parse SSE data:', parseError)
+        }
+      })
+
+      // 监听结束事件
+      eventSource.value.addEventListener('end', (event) => {
+        console.log('SSE Stream ended')
+        onComplete?.()
+        closeSSEConnection()
+        resolve()
+      })
+
+      // 监听错误事件
+      eventSource.value.onerror = (error) => {
+        console.error('SSE connection error:', error)
+        isSSEConnected.value = false
+
+        // 检查连接状态
+        if (eventSource.value?.readyState === EventSource.CLOSED) {
+          console.log('SSE connection closed')
+          onError?.(new Error('SSE connection closed unexpectedly'))
+        } else if (eventSource.value?.readyState === EventSource.CONNECTING) {
+          console.log('SSE connection reconnecting...')
+          // 不调用onError，让EventSource自动重连
+        } else {
+          onError?.(new Error('SSE connection error'))
+        }
+
+        closeSSEConnection()
+        reject(error)
+      }
+
+      // 监听连接打开事件
+      eventSource.value.onopen = () => {
+        console.log('SSE connection opened')
+        isSSEConnected.value = true
+      }
+
+      // 设置超时处理
+      const timeout = setTimeout(() => {
+        if (isSSEConnected.value) {
+          console.log('SSE connection timeout')
+          closeSSEConnection()
+          onError?.(new Error('SSE connection timeout'))
+          reject(new Error('SSE connection timeout'))
+        }
+      }, 60000) // 60秒超时
+
+      // 当Promise解决时清除超时
+      const cleanup = () => {
+        clearTimeout(timeout)
+      }
+
+      // 监听结束事件时清理
+      eventSource.value.addEventListener('end', cleanup)
+      eventSource.value.onerror = cleanup
+
+    } catch (error) {
+      console.error('Failed to create SSE connection:', error)
+      onError?.(error)
+      reject(error)
+    }
+  })
+}
+
+/**
+ * 组件卸载时清理SSE连接
+ */
+onUnmounted(() => {
+  closeSSEConnection()
+})
 </script>
 
 <style scoped>
@@ -469,6 +663,25 @@ const callChatAPI = async (message) => {
 .message-input:disabled {
   background: #f9fafb;
   cursor: not-allowed;
+}
+
+.sse-dot {
+  width: 8px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 50%;
+  animation: ssePulse 2s infinite;
+}
+
+@keyframes ssePulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.1);
+  }
 }
 
 /* 发送按钮样式 */

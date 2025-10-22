@@ -29,6 +29,7 @@ func SetupRouters(router *gin.Engine) {
 
 		// 聊天相关路由
 		api.POST("/chat", chatHandler.Chat)
+		api.GET("/chatStream", chatHandler.ChatStream)
 	}
 
 	// 根路径

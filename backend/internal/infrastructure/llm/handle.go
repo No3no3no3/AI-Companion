@@ -43,10 +43,7 @@ type Usage struct {
 
 type StreamChunk struct {
 	ID      string
-	Object  string
-	Created time.Time
-	Model   string
-	Choices []Choice
+	Message string
 	Done    bool
 	Error   error
 }

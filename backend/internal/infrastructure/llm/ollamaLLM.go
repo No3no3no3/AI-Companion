@@ -50,7 +50,7 @@ func (o *OllamaLLM) GenerateStream(ctx context.Context, req *ChatRequest) (<-cha
 			llms.WithStreamingFunc(func(_ context.Context, chunk []byte) error {
 				select {
 				case resChan <- &StreamChunk{
-					Object: string(chunk),
+					Message: string(chunk),
 				}:
 				case <-ctx.Done():
 					// 如果上下文被取消，停止发送

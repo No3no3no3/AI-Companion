@@ -2,8 +2,8 @@ package chat_domain
 
 // Request 聊天请求结构
 type Request struct {
-	Message string `json:"message" binding:"required"`
-	UserID  string `json:"userId,omitempty"`
+	Message string `json:"message" binding:"required" form:"message"`
+	UserID  string `json:"userId,omitempty" form:"userId"`
 }
 
 // Response 聊天响应结构

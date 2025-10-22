@@ -21,8 +21,8 @@ func NewService() *Service {
 }
 
 // ProcessMessage 处理用户消息并生成AI回复
-func (s *Service) ProcessMessage(ctx context.Context, req *chat_domain.Request) (*chat_domain.Response, error) {
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+func (s *Service) ProcessMessage(c context.Context, req *chat_domain.Request) (*chat_domain.Response, error) {
+	ctx, cancel := context.WithTimeout(c, 15*time.Second)
 	defer cancel()
 
 	result, err := llmHandle.GenerateChat(ctx, &llm.ChatRequest{
@@ -39,4 +39,11 @@ func (s *Service) ProcessMessage(ctx context.Context, req *chat_domain.Request) 
 		Timestamp: time.Now().Unix(),
 	}
 	return reply, nil
+}
+
+// ProcessStreamMessage 流式处理用户消息并生成AI回复
+func (s *Service) ProcessStreamMessage(c context.Context, req *chat_domain.Request) (<-chan *llm.StreamChunk, error) {
+	return llmHandle.GenerateStream(c, &llm.ChatRequest{
+		Message: req.Message,
+	})
 }
